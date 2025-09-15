@@ -1,7 +1,10 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const bus = require('./eventBus');
 const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const rules = JSON.parse(fs.readFileSync(path.join(__dirname, '/rules/rules.json')));
+const ruleMethods = require('./rules/ruleMethods');
 global.crypto = require('crypto').webcrypto;
 
 const sessionPath = path.join(__dirname, 'auth_info_baileys');
@@ -45,7 +48,7 @@ async function startSock() {
     });
 
     // Incoming messages (minimal)
-    sock.ev.on('messages.upsert', (m) => {
+    sock.ev.on('messages.upsert', async (m) => {
       if (m.type !== 'notify') return;
       const msg = m.messages?.[0];
       if (!msg || msg.key.fromMe || !msg.message) return;
@@ -62,6 +65,24 @@ async function startSock() {
           : '';
 
       console.log('📩 From:', msg.key.remoteJid, '💬', text);
+
+			// Look for matching rule
+			const matchedRule = rules.find(rule =>
+					rule.enabled === true &&
+					rule.operand === '=' &&
+					rule.value === text.toLocaleLowerCase()
+			);
+
+			if (matchedRule) {
+				// mark as seen
+				await sock.readMessages([msg.key]);
+				
+				// await sock.sendPresenceUpdate('composing', sender); // send typing indicator
+				// await sleep(3000); // simulate typing delay
+				// await sock.sendPresenceUpdate('paused', sender); // stop typing indicator
+
+				await runActionsForMatchedRule(matchedRule, msg).catch(console.error);
+			}
     });
   });
 }
@@ -100,6 +121,51 @@ function getStatus() {
   }
   return { status: 'disconnected' };
 }
+
+async function runActionsForMatchedRule(matchedRule, message) {
+	const ctx = {
+		message,
+		senderPhone: (message.key.remoteJid || '').replace(/@s\.whatsapp\.net$/, ''),
+	};
+
+	for (const action of matchedRule.actions || []) {
+		if (action.type !== 'ruleMethod') continue;
+
+		const fn = ruleMethods[action.name];
+		if (typeof fn !== 'function') {
+			console.warn(`Unknown ruleMethod: ${action.name}`);
+			continue;
+		}
+
+		const params = resolveParams('', action.params || {}, ctx);
+		await fn(ctx, params);
+	}
+}
+
+function resolveParams(key, params, context) {
+  if (params && typeof params === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(params)) out[k] = resolveParams(k, v, context);
+    return out;
+  }
+  return interpolate(key, params, context);
+}
+
+function interpolate(key, value, context) {
+  if (key == 'text') return value;
+	if(key == 'sender') return context.senderPhone;
+  return "";
+}
+
+// Listen for sendText events
+bus.on('whatsapp:sendText', async ({ to, text }) => {
+	try {
+		await sendText(to, text);
+		console.log(`✅ Sent message to ${to}`);
+	} catch (err) {
+		console.error(`❌ Failed to send message to ${to}:`, err);
+	}
+});
 
 module.exports = {
   ensureStarted,

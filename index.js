@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const { ensureStarted, getStatus, hasSavedSession } = require('./whatsapp');
 const { startAttendanceCron } = require('./crons/attendanceCron');
+const { startUpdateRedisCacheCron } = require('./crons/updateRedisCacheCron');
 
 const PORT = process.env.PORT || 3300;
 const app = express();
@@ -88,6 +89,7 @@ app.post('/send', async (req, res) => {
 
   // start crons
   startAttendanceCron();
+  startUpdateRedisCacheCron();
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);

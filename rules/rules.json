@@ -1,0 +1,26 @@
+[
+  {
+    "ruleName": "Perform action on 'subscribe'",
+    "enabled": true,
+    "priority": 1,
+    "match": "all",
+    "operand": "=",
+    "value": "subscribe",
+    "actions": [
+      { "type": "ruleMethod", "name": "subOrUnsubToWhatsapp", "params": { "text": "1" ,  "sender": "{{senderPhone}}" } }
+    ],
+    "stopOnMatch": true
+  },
+  {
+    "ruleName": "Perform action on 'unsubscribe'",
+    "enabled": true,
+    "priority": 2,
+    "match": "all",
+    "operand": "=",
+    "value": "unsubscribe",
+    "actions": [
+      { "type": "ruleMethod", "name": "subOrUnsubToWhatsapp", "params": { "text": "0" ,  "sender": "{{senderPhone}}" } }
+    ],
+    "stopOnMatch": true
+  }
+]
