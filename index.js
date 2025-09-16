@@ -4,11 +4,16 @@ require('dotenv').config();
 const { ensureStarted, getStatus, hasSavedSession } = require('./whatsapp');
 const { startAttendanceCron } = require('./crons/attendanceCron');
 const { startUpdateRedisCacheCron } = require('./crons/updateRedisCacheCron');
+const { getRedis } = require('./redisClient');
 
 const PORT = process.env.PORT || 3300;
 const app = express();
 app.use(express.json());
 
+let redis;
+(async () => {
+  redis = await getRedis(); // connect once at startup
+})();
 // ------- Routes only -------
 
 app.get('/', (_req, res) => {
@@ -74,6 +79,41 @@ app.post('/send', async (req, res) => {
   } catch (err) {
     console.error('❌ Send error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /redis/set
+// Body: { "hash": "schools", "key": "3C-61-05-11-DD-18", "value": { ... } }
+app.post('/redis/set', async (req, res) => {
+  try {
+    const { hash, key, value } = req.body || {};
+
+    if (!hash || typeof hash !== 'string' || !hash.trim()) {
+      return res.status(400).json({ error: 'hash (hashmap name) is required' });
+    }
+    if (!key || typeof key !== 'string' || !key.trim()) {
+      return res.status(400).json({ error: 'key (field in the hash) is required' });
+    }
+    if (typeof value === 'undefined') {
+      return res.status(400).json({ error: 'value (object or string) is required' });
+    }
+
+    const toStore = (typeof value === 'string') ? value : JSON.stringify(value);
+
+    // HSET returns 1 if new field created, 0 if existing field updated
+    const result = await redis.hSet(hash, key, toStore);
+    const created = result === 1;
+
+    return res.json({
+      ok: true,
+      hash,
+      key,
+      created,                 // true = inserted, false = updated
+      storedAs: 'json-string'  // value saved as JSON string (if object)
+    });
+  } catch (e) {
+    console.error('POST /redis/set error:', e);
+    res.status(500).json({ error: e.message });
   }
 });
 
