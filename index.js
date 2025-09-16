@@ -120,6 +120,30 @@ app.post('/redis/set', async (req, res) => {
   }
 });
 
+app.post('/redis/hdel', async (req, res) => {
+  try {
+    // accept from body (preferred) or query
+    const hash = (req.body?.hash || req.query?.hash || '').toString().trim();
+    const key  = (req.body?.key  || req.query?.key  || '').toString().trim();
+
+    if (!hash) return res.status(400).json({ error: 'hash (hashmap name) is required' });
+    if (!key)  return res.status(400).json({ error: 'key (field in the hash) is required' });
+
+    const removed = await redis.hDel(hash, key); // 1 if field removed, 0 if not found
+    console.log(`🗑 Deleted ${removed} field(s) from hash "${hash}"`);
+
+    return res.json({
+      ok: true,
+      hash,
+      key,
+      deleted: removed === 1
+    });
+  } catch (e) {
+    console.error('DELETE /redis/hdel error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /redis/preview?pattern=schools:*&limit=100&sample=20
 app.get('/redis/preview', async (req, res) => {
   try {
