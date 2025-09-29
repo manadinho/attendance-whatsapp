@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const { getRedis } = require('../redisClient');
 const { sendText, getStatus } = require('../whatsapp'); // use exported API
-const { timeStrToSeconds, localSecondsSinceMidnight, prettyTime } = require('../utils');
+const { timeStrToSeconds, localSecondsSinceMidnight, prettyTime, prepareAttendanceMessage } = require('../utils');
 require('dotenv').config();
 
 let redis;
@@ -35,6 +35,7 @@ async function startAttendanceCron() {
 
 				const student = await redis.hGet('students', String(attendanceObj.rfid));
 				const school = await redis.hGet('schools', String(attendanceObj.mac));
+				const schoolMessageTemplates = await redis.hGet('attendance_message_templates', String(attendanceObj.mac));
 				if(!student || !school) {
 					console.log('❌ Skipping Attendance: Student or school not found', attendanceObj);
 					continue;
@@ -42,6 +43,7 @@ async function startAttendanceCron() {
 
 				const studentObj = JSON.parse(student);
 				const schoolObj = JSON.parse(school);
+				const schoolMessageTemplatesObj = JSON.parse(schoolMessageTemplates);
 
 				const ciStart = timeStrToSeconds(schoolObj.checkin_start);
 				const ciEnd   = timeStrToSeconds(schoolObj.checkin_end);
@@ -59,9 +61,27 @@ async function startAttendanceCron() {
 
 				let text;
 				if (kind == 'checkin') {
-					text = `✅ Dear ${studentObj.guardian_name}. ${studentObj.name} checked in at ${at}.`;
+					const messageTemplate = schoolMessageTemplatesObj?.find(template => template.type == 'arrival')?.body || '✅ Dear {guardian_name}. {student_name} checked in at {date_time}.';
+					text = prepareAttendanceMessage(
+							{
+								template: messageTemplate, 
+								studentName: studentObj.name, 
+								guardianName: studentObj.guardian_name, 
+								time: at, 
+								standard_name: studentObj.standard_name,
+								schoolName: schoolObj.name
+							});
 				} else if (kind == 'checkout') {
-					text = `🏁 Dear ${studentObj.guardian_name}. ${studentObj.name} checked out at ${at}.`;
+					const messageTemplate = schoolMessageTemplatesObj?.find(template => template.type == 'departure')?.body || '🏁 Dear {guardian_name}. {student_name} checked out at {date_time}.';
+					text = prepareAttendanceMessage(
+						{
+							template: messageTemplate, 
+							studentName: studentObj.name, 
+							guardianName: studentObj.guardian_name, 
+							time: at, 
+							standard_name: studentObj.standard_name,
+							schoolName: schoolObj.name
+						});
 				}
 
 				if(!text) {
