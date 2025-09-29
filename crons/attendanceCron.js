@@ -45,10 +45,10 @@ async function startAttendanceCron() {
 				const schoolObj = JSON.parse(school);
 				const schoolMessageTemplatesObj = JSON.parse(schoolMessageTemplates);
 
-				const ciStart = timeStrToSeconds(schoolObj.checkin_start);
-				const ciEnd   = timeStrToSeconds(schoolObj.checkin_end);
-				const coStart = timeStrToSeconds(schoolObj.checkout_start);
-				const coEnd   = timeStrToSeconds(schoolObj.checkout_end);
+				const ciStart = timeStrToSeconds(schoolObj.checkin_start) - (schoolObj?.buffer_minutes * 60);
+				const ciEnd   = timeStrToSeconds(schoolObj.checkin_end) + (schoolObj?.buffer_minutes * 60);
+				const coStart = timeStrToSeconds(schoolObj.checkout_start) - (schoolObj?.buffer_minutes * 60);
+				const coEnd   = timeStrToSeconds(schoolObj.checkout_end) + (schoolObj?.buffer_minutes * 60);
 
 				const secFromMidnight = localSecondsSinceMidnight(Number(attendanceObj?.timestamp));
 
