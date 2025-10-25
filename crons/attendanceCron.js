@@ -34,8 +34,8 @@ async function startAttendanceCron() {
 				alreadySent.push(attendanceObj.rfid);
 
 				const student = await redis.hGet('students', String(attendanceObj.rfid));
-				const school = await redis.hGet('schools', String(attendanceObj.mac));
-				const schoolMessageTemplates = await redis.hGet('attendance_message_templates', String(attendanceObj.mac));
+				const school = await redis.hGet('schools', String(attendanceObj.channelId));
+				const schoolMessageTemplates = await redis.hGet('attendance_message_templates', String(attendanceObj.channelId));
 				if(!student || !school) {
 					console.log('❌ Skipping Attendance: Student or school not found', attendanceObj);
 					continue;
