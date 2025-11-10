@@ -26,4 +26,36 @@ function prepareAttendanceMessage(data) {
     .replace('{school_name}', data?.schoolName) || '';
 }
 
-module.exports = { timeStrToSeconds, localSecondsSinceMidnight, prettyTime, prepareAttendanceMessage }
+function isValidSid(sid) {
+  return /^[A-Za-z0-9_-]+$/.test(sid);
+}
+
+async function fetchImageBuffer (secureUrl, url) {
+  try {
+    const res = await axios.get(secureUrl, {
+      responseType: 'arraybuffer',
+      headers: { Accept: 'image/*' },
+      timeout: 10000,
+      maxRedirects: 3,
+      validateStatus: (s) => s >= 200 && s < 300,
+      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+    });
+    return Buffer.from(res.data);
+  } catch (_) {
+    try {
+      const res = await axios.get(url, {
+        responseType: 'arraybuffer',
+        headers: { Accept: 'image/*' },
+        timeout: 10000,
+        maxRedirects: 3,
+        validateStatus: (s) => s >= 200 && s < 300,
+        httpAgent: new http.Agent({ keepAlive: true }),
+      });
+      return Buffer.from(res.data);
+    } catch (_e) {
+      return null;
+    }
+  }
+};
+
+module.exports = { timeStrToSeconds, localSecondsSinceMidnight, prettyTime, prepareAttendanceMessage, isValidSid, fetchImageBuffer }

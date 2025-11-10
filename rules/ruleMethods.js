@@ -2,7 +2,7 @@
 const bus = require('.././eventBus');
 
 module.exports = {
-  async subOrUnsubToWhatsapp(ctx, { text, sender }) {
+  async subOrUnsubToWhatsapp(ctx, { sid, text, sender }) {
     // Basic validation
     if (!sender) {
       console.error('sender is required');
@@ -26,13 +26,13 @@ module.exports = {
     // Reply to user based on action
     if (text === '1') {
       if (ctx.message?.key?.remoteJid) {
-        bus.emit('whatsapp:sendText', { to: ctx.message.key.remoteJid, text: 'You are now subscribed ✅' });
+        bus.emit('whatsapp:sendText', { sid: ctx.sid, to: ctx.message.key.remoteJid, text: 'You are now subscribed ✅' });
       } else {
         console.log(`✅ Subscribed ${sender}`);
       }
     } else if (text === '0') {
       if (ctx.message?.key?.remoteJid) {
-        bus.emit('whatsapp:sendText', { to: ctx.message.key.remoteJid, text: 'You are unsubscribed ✅' });
+        bus.emit('whatsapp:sendText', { sid: ctx.sid, to: ctx.message.key.remoteJid, text: 'You are unsubscribed ✅' });
       } else {
         console.log(`✅ Unsubscribed ${sender}`);
       }

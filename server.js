@@ -198,7 +198,7 @@ function resolveParams(key, params, context) {
 
 function interpolate(key, value, context) {
   if (key == 'text') return value;
-  if(key == 'sender') return context.senderPhone;
+	if(key == 'sender') return context.senderPhone;
   return "";
 }
 
@@ -465,3 +465,4 @@ bus.on('whatsapp:sendText', async ({ sid, to, text }) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log('🚀 Server running at http://localhost:' + PORT);
 });
+
