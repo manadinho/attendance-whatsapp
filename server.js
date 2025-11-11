@@ -50,12 +50,12 @@ async function startSockFor(sid) {
 
   const authFolder = `${SESSION_PREFIX}_${sid}`;
   const { state, saveCreds } = await useMultiFileAuthState(authFolder);
-  const version = [2, 3000, 1027934701];
+  // const version = [2, 3000, 1027934701];
 
   const myGen = ++GEN_COUNTER; // mark this start attempt
 
   const sock = makeWASocket({
-    version,
+    // version,
     auth: state,
     // printQRInTerminal: true,
   });
